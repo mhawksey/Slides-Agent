@@ -1,0 +1,129 @@
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script>
+        var REC_STATUS = 'stopped';
+        var CUR_KEY = false;
+        /**
+         * Run initializations on sidebar load.
+         */
+        $(function () {
+
+            // Assign handler functions to sidebar elements here, if needed.
+            $('#record').click(recordStatus);
+            var curKey = false;
+            $('#command').keypress(function (e) {
+                var key = e.which;
+                //console.log(key);
+                switch (key) {
+                    case 13:
+                        $(this).prop('disabled', true);
+                        $('#processing').show();
+                        sendCommand($(this).val(), 'text');
+                    break;
+                    case 46:
+                        if (CUR_KEY !== key){
+                          CUR_KEY = key;
+                          //recordStatus();
+                          tweetSlide();
+                        }
+                        console.log(key);
+                        return false;
+                    break;
+                   
+                }
+
+            });
+            $('#command').keyup(function (e) {
+                var key = e.which;
+                console.log(key)
+                switch (key) {
+                    case 190:
+                        CUR_KEY = key;
+                        //recordStatus();
+                        return false;
+                        break;
+                    case 34:
+                      google.script.run.slideMove("next slide");
+                    break;
+                    case 33:
+                      google.script.run.slideMove("previous slide");
+                    break;
+                }
+                });
+
+            // One way to set your first message 
+            $('#history').prepend($(
+                '<li class="collection-item reply"><i class="material-icons">format_quote</i>How can I help?</li>'
+                ));
+            $('#processing').hide();
+        });
+
+        // handle mic button 
+        function recordStatus() {
+            if (REC_STATUS === 'stopped') {
+                $('#record').addClass('recording');
+                startRecording();
+                REC_STATUS = 'recording';
+            } else if (REC_STATUS === 'recording') {
+                $('#record').removeClass('recording');
+                stopRecording();
+                REC_STATUS = 'stopped';
+            }
+
+        }
+        
+        function tweetSlide(){
+          google.script.run.tweetThis();
+        }
+
+        // function to send text inputs
+        function sendCommand(input, type) {
+            // detect the browser language
+            var lang = navigator.language;
+            console.log('Detect language ' + lang);
+
+            // Send the value to the server and handle the response.
+            google.script.run
+                .withSuccessHandler(sucessHandler)
+                .withFailureHandler(failureHandler)
+                .handleCommand(input, type, lang);
+        }
+
+        // Handle responses from Dialogflow
+        function sucessHandler(intent) {
+            // Respond to success conditions here.
+            console.log(intent)
+            $('#command').prop('disabled', false).val('');
+            M.textareaAutoResize($('#command'));
+            $('#history').prepend($('<li class="collection-item quote"><i class="material-icons">format_quote</i>' +
+                intent.queryResult.queryText + '</li>'));
+            if (intent.queryResult.fulfillmentText) {
+                $('#history').prepend($('<li class="collection-item reply"><i class="material-icons">format_quote</i>' +
+                    intent.queryResult.fulfillmentText + '</li>'));
+            }
+            $('#command').focus();
+            $('#processing,#processingAudio').hide();
+        }
+
+        // Handle if something goes wrong
+        function failureHandler(intent) {
+            // Respond to failure conditions here.
+            $('#command').prop('disabled', false);
+            console.log(intent);
+            showStatus(intent, 'error');
+            $('#processing,#processingAudio').hide();
+        }
+
+        /**
+         * Displays the given status message in the sidebar.
+         *
+         * @param {String} msg The status message to display.
+         * @param {String} classId The message type (class id) that the message
+         *   should be displayed as.
+         */
+        function showStatus(msg, classId) {
+            $('#sidebar-status').removeClass().html(msg);
+            if (classId) {
+                $('#sidebar-status').addClass(classId);
+            }
+        }
+    </script>
